@@ -2776,7 +2776,6 @@ retry_avoidcopy:
 
 	mmu_notifier_invalidate_range_end(vma, mmun_start, mmun_end,
 					  MMU_MIGRATE);
-
 	page_cache_release(new_page);
 	page_cache_release(old_page);
 
