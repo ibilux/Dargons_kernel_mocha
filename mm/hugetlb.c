@@ -2773,11 +2773,15 @@ retry_avoidcopy:
 		new_page = old_page;
 	}
 	spin_unlock(&mm->page_table_lock);
-	mmu_notifier_invalidate_range_end(mm, mmun_start, mmun_end);
-	/* Caller expects lock to be held */
-	spin_lock(&mm->page_table_lock);
+
+	mmu_notifier_invalidate_range_end(vma, mmun_start, mmun_end,
+					  MMU_MIGRATE);
+
 	page_cache_release(new_page);
 	page_cache_release(old_page);
+
+	/* Caller expects lock to be held */
+	spin_lock(&mm->page_table_lock);
 	return 0;
 }
 
