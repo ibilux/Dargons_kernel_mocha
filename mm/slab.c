@@ -2551,13 +2551,15 @@ static void *alloc_slabmgmt(struct kmem_cache *cachep,
 	return freelist;
 }
 
-static inline unsigned int get_free_obj(struct page *page, unsigned int idx)
+static inline freelist_idx_t get_free_obj(struct page *page, unsigned int idx)
+
 {
 	return ((unsigned int *)page->freelist)[idx];
 }
 
 static inline void set_free_obj(struct page *page,
-					unsigned int idx, unsigned int val)
+					unsigned int idx, freelist_idx_t val)
+
 {
 	((unsigned int *)(page->freelist))[idx] = val;
 }
