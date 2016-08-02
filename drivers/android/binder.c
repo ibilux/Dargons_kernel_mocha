@@ -2178,16 +2178,17 @@ static void binder_transaction(struct binder_proc *proc,
 			fp->pad_binder = 0;
 			fp->fd = target_fd;
 		} break;
-		case BINDER_TYPE_FDA: {
-			struct binder_fd_array_object *fda =
-				to_binder_fd_array_object(hdr);
-			struct binder_buffer_object *parent =
-				binder_validate_ptr(t->buffer, fda->parent,
-						    off_start,
-						    offp - off_start);
-			if (!parent) {
-				binder_user_error("%d:%d got transaction with invalid parent offset or type\n",
-						  proc->pid, thread->pid);
+
+		case BINDER_TYPE_HANDLE:
+		case BINDER_TYPE_WEAK_HANDLE: {
+			struct binder_ref *ref = binder_get_ref(proc, fp->handle,
+						fp->type == BINDER_TYPE_HANDLE);
+
+			if (ref == NULL) {
+				binder_user_error("%d:%d got transaction with invalid handle, %d\n",
+						proc->pid,
+						thread->pid, fp->handle);
+
 				return_error = BR_FAILED_REPLY;
 				goto err_bad_parent;
 			}
