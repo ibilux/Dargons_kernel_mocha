@@ -1,7 +1,7 @@
 /*
  * tegra_vcm30t124.c - Tegra VCM30 T124 Machine driver
  *
- * Copyright (c) 2013-2014 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2017 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -924,8 +924,16 @@ static int tegra_vcm30t124_driver_probe(struct platform_device *pdev)
 		if (ret)
 			goto err;
 
-		machine->gpio_dap_direction = of_get_named_gpio(np,
-					"nvidia,dap_direction_gpios", 0);
+	if (machine->wm_rate_via_kcontrol >=
+		sizeof(tegra_vcm30t124_srate_values)/
+		sizeof(tegra_vcm30t124_srate_values[0])) {
+		dev_err(card->dev, "Parameter out of bounds\n");
+		return -EINVAL;
+	}
+
+	/* update the dai params rate */
+	dai_params->rate_min =
+		tegra_vcm30t124_srate_values[machine->wm_rate_via_kcontrol];
 
 		if (!gpio_is_valid(machine->gpio_dap_direction)) {
 			dev_err(&pdev->dev,
@@ -973,14 +981,18 @@ static int tegra_vcm30t124_driver_probe(struct platform_device *pdev)
 			goto err;
 		}
 
-		tegra_vcm30t124_links[12].cpu_of_node = of_parse_phandle(np,
-					"nvidia,i2s-controller-2", 0);
-		if (!tegra_vcm30t124_links[12].cpu_of_node) {
-			dev_err(&pdev->dev,
-				"Property 'nvidia,i2s-controller-2' missing or invalid\n");
-			ret = -EINVAL;
-			goto err;
-		}
+
+	if (machine->ad_rate_via_kcontrol >=
+		sizeof(tegra_vcm30t124_srate_values)/
+		sizeof(tegra_vcm30t124_srate_values[0])) {
+		dev_err(card->dev, "Parameter out of bounds\n");
+		return -EINVAL;
+	}
+
+	/* update the dai params rate */
+	dai_params->rate_min =
+		tegra_vcm30t124_srate_values[machine->ad_rate_via_kcontrol];
+
 
 		tegra_vcm30t124_links[13].cpu_name =
 					tegra_vcm30t124_links[11].cpu_name;
@@ -1012,14 +1024,18 @@ static int tegra_vcm30t124_driver_probe(struct platform_device *pdev)
 		tegra_vcm30t124_links[19].cpu_name =
 					tegra_vcm30t124_links[13].cpu_name;
 
-		tegra_vcm30t124_links[0].cpu_of_node = of_parse_phandle(np,
-					"nvidia,apbif", 0);
-		if (!tegra_vcm30t124_links[0].cpu_of_node) {
-			dev_err(&pdev->dev,
-				"Property 'nvidia,apbif' missing or invalid\n");
-			ret = -EINVAL;
-			goto err;
-		}
+	if (machine->ak_rate_via_kcontrol >=
+		sizeof(tegra_vcm30t124_srate_values)/
+		sizeof(tegra_vcm30t124_srate_values[0])) {
+		dev_err(card->dev, "Parameter out of bounds\n");
+		return -EINVAL;
+	}
+
+	/* update the dai params rate */
+	dai_params->rate_min =
+		tegra_vcm30t124_srate_values[machine->ak_rate_via_kcontrol];
+
+
 
 		tegra_vcm30t124_links[0].codec_name =
 				tegra_vcm30t124_links[11].cpu_name;
