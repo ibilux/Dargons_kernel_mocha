@@ -578,13 +578,8 @@ static int tegra_crypto_sha(struct tegra_sha_req *sha_req)
 		return -EINVAL;
 	}
 
-		if (strncpy_from_user(algo, sha_req->algo, sizeof(algo)) < 0) {
-			ret = -EFAULT;
-			goto out_alloc;
-		}
-		algo[sizeof(algo) - 1] = '\0';
+	tfm = crypto_alloc_ahash(sha_req->algo, 0, 0);
 
-		tfm = crypto_alloc_ahash(algo, 0, 0);
 	if (IS_ERR(tfm)) {
 		pr_err("alg:hash:Failed to load transform for %s:%ld\n",
 			algo, PTR_ERR(tfm));
