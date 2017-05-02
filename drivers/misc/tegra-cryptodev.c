@@ -929,8 +929,6 @@ rng_out:
 			return -EINVAL;
 		}
 
-		speculation_barrier();
-
 		ret = tegra_crypt_rsa(ctx, &rsa_req);
 		break;
 
