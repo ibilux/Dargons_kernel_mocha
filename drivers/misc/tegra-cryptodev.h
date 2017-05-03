@@ -154,8 +154,7 @@ struct tegra_sha_req {
 #ifdef CONFIG_COMPAT
 struct tegra_sha_req_32 {
 	char key[TEGRA_CRYPTO_MAX_KEY_SIZE];
-	unsigned int keylen;
- 
+	__u32 keylen;
 	__u32 algo;
 	__u32 plaintext;
 	__u32 result;
