@@ -33,6 +33,7 @@
 #include <linux/hardirq.h>
 #include <linux/jiffies.h>
 #include <linux/workqueue.h>
+#include <linux/debugfs.h>
 #include <linux/proc_fs.h>
 
 #include "internal.h"
