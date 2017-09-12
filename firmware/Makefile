@@ -117,18 +117,10 @@ fw-shipped-$(CONFIG_USB_SERIAL_KEYSPAN_USA28XB) += keyspan/usa28xb.fw
 fw-shipped-$(CONFIG_USB_SERIAL_KEYSPAN_USA28X) += keyspan/usa28x.fw
 fw-shipped-$(CONFIG_USB_SERIAL_KEYSPAN_USA49W) += keyspan/usa49w.fw
 fw-shipped-$(CONFIG_USB_SERIAL_KEYSPAN_USA49WLC) += keyspan/usa49wlc.fw
-fw-shipped-$(CONFIG_TOUCHSCREEN_ATMEL_MXT) += mxt1664t_config_no_dummy.fw \
-						mxt1664t_config_with_dummy.fw \
+fw-shipped-$(CONFIG_TOUCHSCREEN_ATMEL_MXT) += mxt1664t_config.fw \
 						mxt1066t_config.fw \
 						mxt1066t.fw \
 						mxt1664t.fw
-fw-shipped-$(CONFIG_TOUCHSCREEN_SYNAPTICS_DSX) += synaptics_7040_firmware.fw \
-				              synaptics_7040_test_data.fw
-
-fw-shipped-$(CONFIG_BATTERY_BQ27x00) += 0104_lgc.dffs \
-					0204_atl.dffs
-
-else
 fw-shipped- += keyspan/mpr.fw keyspan/usa18x.fw keyspan/usa19.fw	\
 	keyspan/usa19qi.fw keyspan/usa19qw.fw keyspan/usa19w.fw		\
 	keyspan/usa28.fw keyspan/usa28xa.fw keyspan/usa28xb.fw		\
