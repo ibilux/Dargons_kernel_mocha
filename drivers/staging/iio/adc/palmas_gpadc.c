@@ -514,11 +514,12 @@ static int palmas_gpadc_read_prepare(struct palmas_gpadc *adc, int adc_chan)
 	ret = palmas_gpadc_enable(adc, adc_chan, true);
 	if (ret < 0)
 		return ret;
-	
+
 	/* It takes some time to charge the cap as IN0 is current sourcing */
 	if (adc_chan == PALMAS_ADC_CH_IN0)
 		mdelay(30);
-		
+
+
 	return palmas_gpadc_start_mask_interrupt(adc, 0);
 }
 
@@ -1284,6 +1285,7 @@ static int palmas_gpadc_probe(struct platform_device *pdev)
 		goto out_irq_auto1_free;
 	}
 
+	the_adc = adc;
 	palmas_gpadc_debugfs_init(adc);
 	the_adc = adc;
 	return 0;
