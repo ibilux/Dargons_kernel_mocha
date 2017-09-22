@@ -468,7 +468,21 @@ static int lp5521_probe(struct i2c_client *client,
 	int ret;
 	struct lp55xx_chip *chip;
 	struct lp55xx_led *led;
-	struct lp55xx_platform_data *pdata = client->dev.platform_data;
+	struct lp55xx_platform_data *pdata;
+
+	if (client->dev.of_node) {
+		pdata = devm_kzalloc(&client->dev,
+			sizeof(struct lp55xx_platform_data), GFP_KERNEL);
+		if (!pdata) {
+			dev_err(&client->dev, "Failed to allocate memory\n");
+			return -ENOMEM;
+		}
+
+		ret = lp5521_parse_dt(&client->dev, pdata);
+		if (ret)
+			return ret;
+	} else
+		pdata = client->dev.platform_data;
 
 	if (client->dev.of_node) {
 		pdata = devm_kzalloc(&client->dev,
