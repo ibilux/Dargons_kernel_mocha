@@ -7,6 +7,7 @@ CFLAGS_tegra_sm_interface.o :=$(call as-instr,.arch_extension sec,-DREQUIRES_SEC
 obj-$(CONFIG_USB_SUPPORT)               += tegra_usb_pmc.o
 obj-$(CONFIG_TEGRA_USB_SHARED_PAD)      += tegra_usb_pad_ctrl.o
 obj-$(CONFIG_TEGRA_FIQ_DEBUGGER)        += tegra_fiq_debugger.o
+obj-y                                   += tegra_sm_interface.o
 
 ifneq ($(CONFIG_ARCH_TEGRA_2x_SOC),y)
 ifneq ($(CONFIG_ARCH_TEGRA_3x_SOC),y)
