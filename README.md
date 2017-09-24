@@ -20,14 +20,21 @@ Disable ADF in the config if you want use this kernel with old blobs, without it
 	* Camera
 	* OTG
 	* PSCI
+	* MIC
+	* sound threw Headphone
 
 =========================================================================
 # BUILD
 ./toolchain.sh
+
 ./build.sh
+
 make mocha_android_defconfig(for Android KK & L) & mocha_linage_defconfig (for Linage )OR mocha_defconfig(for Ubuntu)
+
 make -j4 zImage
+
 make tegra124-mocha.dtb
+
 
 # Busses
 * I2C0:
