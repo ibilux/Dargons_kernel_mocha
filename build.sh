@@ -22,7 +22,9 @@ FUNC_COMPILE()
 	echo -e "\n\e[95mStarting the build..."
 	make -C $R O=$BUILDING_DIR $DEFCONFIG 
 	make -j$JOBS -C $R O=$BUILDING_DIR ARCH=arm CROSS_COMPILE=$CROSS_COMPILER
+	make tegra124-mocha.dtb -C $R O=$BUILDING_DIR ARCH=arm CROSS_COMPILE=$CROSS_COMPILER
 	cp $OUT_DIR/kernel_obj/arch/arm/boot/zImage $OUT_DIR/zImage
+	cp $OUT_DIR/kernel_obj/arch/arm/boot/dts/tegra124-mocha.dtb $OUT_DIR/mocha.dtb
 	echo -e "\e[34mJob done!"
 
 	echo -e "\n\e[95mCopying the Modules..."
