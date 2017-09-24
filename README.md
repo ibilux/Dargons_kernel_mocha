@@ -29,7 +29,7 @@ Disable ADF in the config if you want use this kernel with old blobs, without it
 
 ./build.sh
 
-make mocha_android_defconfig(for Android KK & L) & mocha_linage_defconfig (for Linage )OR mocha_defconfig(for Ubuntu)
+make mocha_android_defconfig(for Android KK & L) & mocha_lineage_defconfig (for Lineage )OR mocha_linux_defconfig(for Ubuntu)
 
 make -j4 zImage
 
