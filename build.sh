@@ -1,7 +1,7 @@
 #!/bin/bash
 R=$(pwd)
 export ARCH=arm
-DEFCONFIG=mocha_user_defconfig
+DEFCONFIG=mocha_android_defconfig
 CROSS_COMPILER=$R/tc/bin/arm-linux-gnueabihf- 
 OUT_DIR=$R/out
 BUILDING_DIR=$OUT_DIR/kernel_obj
