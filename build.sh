@@ -6,7 +6,7 @@ CROSS_COMPILER=$R/tc/bin/arm-linux-gnueabihf-
 OUT_DIR=$R/out
 BUILDING_DIR=$OUT_DIR/kernel_obj
 MODULES_DIR=$OUT_DIR/modules
-JOBS=16 #2 x Number of cores
+JOBS=8 # x Number of cores
 
 mkdir -p $OUT_DIR $BUILDING_DIR $MODULES_DIR
 FUNC_CLEANUP()
