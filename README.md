@@ -9,7 +9,6 @@ Disable ADF in the config if you want use this kernel with old blobs, without it
 	* LCD panel
 	* Touch Screens
 	* Charger
-	* Wi-fi
 	* BT
 	* FM
 	* Button-backlight
@@ -19,15 +18,14 @@ Disable ADF in the config if you want use this kernel with old blobs, without it
 	* Vibrator
 	* Battery
 	* Camera
-	* Sound
 	* OTG
 	* PSCI
 
 =========================================================================
 # BUILD
-export ARCH=arm
-export CROSS_COMPILE=arm-linux-gnueabihf-
-make mocha_android_defconfig(for Android) OR mocha_defconfig(for Ubuntu)
+./toolchain.sh
+./build.sh
+make mocha_android_defconfig(for Android KK & L) & mocha_linage_defconfig (for Linage )OR mocha_defconfig(for Ubuntu)
 make -j4 zImage
 make tegra124-mocha.dtb
 
