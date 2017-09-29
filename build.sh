@@ -12,7 +12,6 @@ mkdir -p $OUT_DIR $BUILDING_DIR $MODULES_DIR
 FUNC_CLEANUP()
 {
 	echo -e "\n\e[95mCleaning up..."
-	rm -rf $OUT_DIR $ANYKERNEL_DIR
 	mkdir -p $OUT_DIR $BUILDING_DIR $MODULES_DIR
 	echo -e "\e[34mAll clean!"
 }
