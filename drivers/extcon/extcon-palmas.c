@@ -34,7 +34,10 @@
 #include <linux/sched.h>
 #include <linux/workqueue.h>
 
-#define TEMPORARY_HOLD_TIME_1000MS 1000
+
+#define PALMAS_USB_ID_STATE_CONNECTED		1
+#define TEMPORARY_HOLD_TIME_1000MS 		1000
+
 
 enum palmas_usb_cable_id {
 	USB_CABLE_INIT,
