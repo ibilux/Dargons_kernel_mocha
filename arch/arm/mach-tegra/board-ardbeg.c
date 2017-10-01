@@ -1120,9 +1120,7 @@ static void __init tegra_ardbeg_late_init(void)
 		ardbeg_soctherm_init();
 	}
 
-#ifdef CONFIG_BLUEDROID_PM
- 	ardbeg_setup_bluedroid_pm();
-#endif
+
 	ardbeg_sysedp_dynamic_capping_init();
 	ardbeg_sysedp_batmon_init();
 }
