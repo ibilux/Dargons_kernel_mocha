@@ -331,5 +331,47 @@
 		extcon-cable-names = "vbus", "id", "aca-ra", "y-cable", "aca-rb", "aca-rc";
 		#extcon-cells = <0x1>;
 	};
+
+	ehci@7d000000 {
+		nvidia,port-otg;
+		nvidia,has-hostpc;
+		nvidia,turn-off-vbus-on-lp0;
+		nvidia,id-detection-type = <2>;
+		nvidia,hssync-start-delay = <0>;
+		nvidia,idle-wait-delay = <17>;
+		nvidia,elastic-limit = <16>;
+		nvidia,term-range-adj = <6>;
+		nvidia,xcvr-setup = <15>;
+		nvidia,xcvr-lsfslew = <2>;
+		nvidia,xcvr-lsrslew = <2>;
+		nvidia,xcvr-use-fuses;
+		nvidia,vbus-oc-map = <4>;
+		nvidia,xcvr-setup-offset = <0>;
+		status = "disabled";
+	};
+
+	therm_est_sensor {
+		use_activator = <0>;
+		subdev {
+			coeff_set@0 {
+				toffset = <3543>;
+				coeffs = <
+					2 2 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 2 3
+					(-5) 1 0 1 1 0 1 1 0 2 (-1) 1 2 3 3 2 2 1 8 53
+				>;
+			};
+		};
+	};
+
+	thermal-zones {
+		therm_est {
+			trips {
+				skin_trip {
+					temperature = <47000>;
+				};
+			};
+		};
+	};
+
 };
 
