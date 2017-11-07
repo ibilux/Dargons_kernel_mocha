@@ -1117,7 +1117,6 @@ static void __init tegra_ardbeg_late_init(void)
 		loki_soctherm_init();
 	}	else {
 		ardbeg_sensors_init();
-		ardbeg_soctherm_init();
 	}
 
 #ifdef CONFIG_BLUEDROID_PM
