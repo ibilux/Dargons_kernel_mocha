@@ -44,6 +44,16 @@
 
 #ifdef CONFIG_CPU_CP15
 
+
+#define __ACCESS_CP15(CRn, Op1, CRm, Op2)      \
+       "mrc", "mcr", __stringify(p15, Op1, %0, CRn, CRm, Op2), u32
+#define __ACCESS_CP15_64(Op1, CRm)             \
+       "mrrc", "mcrr", __stringify(p15, Op1, %Q0, %R0, CRm), u64
+
+
+#define BPIALL				__ACCESS_CP15(c7, 0, c5, 6)
+#define ICIALLU				__ACCESS_CP15(c7, 0, c5, 0)
+
 extern unsigned long cr_no_alignment;	/* defined in entry-armv.S */
 extern unsigned long cr_alignment;	/* defined in entry-armv.S */
 
