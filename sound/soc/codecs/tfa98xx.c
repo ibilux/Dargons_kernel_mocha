@@ -3,6 +3,7 @@
  *
  * Copyright (C) 2014 Xiaomi Corporation
  * Copyright (C) 2016 XiaoMi, Inc.
+ * Copyright (C) 2018 Artyom Bambalov <artem-bambalov@yandex.ru>
  *
  * Author: Xiang Xiao <xiaoxiang@xiaomi.com>
  *
@@ -59,11 +60,11 @@
 #define TFA98XX_I2SCTRL_RATE_44100	(7 << TFA98XX_I2SREG_I2SSR_POS)
 #define TFA98XX_I2SCTRL_RATE_48000	(8 << TFA98XX_I2SREG_I2SSR_POS)
 
-#define TFA98XX_MUTE_OFF		0
+#define TFA98XX_MUTE_OFF			0
 #define TFA98XX_MUTE_DIGITAL		1
 #define TFA98XX_MUTE_AMPLIFIER		2
 
-#define TFA98XX_MODULE_SPEAKERBOOST	(128 + 1)
+#define TFA98XX_MODULE_SPEAKERBOOST		(128 + 1)
 #define TFA98XX_MODULE_BIQUADFILTERBANK	(128 + 2)
 
 #define TFA98XX_PARAM_SET_LSMODEL	0x06
@@ -75,7 +76,7 @@
 #define TFA98XX_FW_SPEAKER		2
 #define TFA98XX_FW_CONFIG		3
 #define TFA98XX_FW_PRESET		4
-#define TFA98XX_FW_EQUALIZER		5
+#define TFA98XX_FW_EQUALIZER	5
 #define TFA98XX_FW_NUMBER		6
 
 struct tfa98xx_priv {
@@ -855,51 +856,33 @@ static DEVICE_ATTR(pilot_tone, 0444, tfa98xx_pilot_tone_show, NULL);
 
 static int tfa98xx_firmware_put(struct tfa98xx_priv *tfa98xx, unsigned long id, const char *name);
 
-static void tfa98xx_container_loaded(const struct firmware *cont, void *context)
+static void tfa98xx_container_loaded(const struct firmware *cont, void *context) {
+	int i;
+	struct tfa98xx_priv *tfa98xx = context;
+
+	release_firmware(cont);
+
+	for (i = 0; i < TFA98XX_FW_NUMBER; i++)
+		tfa98xx_firmware_put(tfa98xx, i, tfa98xx->fw_name[i]);
+}
+
+static int tfa98xx_load_container(struct tfa98xx_priv *tfa98xx)
 {
-       struct tfa98xx_priv *tfa98xx = context;
-       release_firmware(cont);
-       printk("tfa98xx_container_loaded\n");
-
-       tfa98xx_firmware_put(tfa98xx, TFA98XX_FW_BOOT, "tfa9890_boot.patch");
-       tfa98xx_firmware_put(tfa98xx, TFA98XX_FW_ROM, "tfa9890_rom.patch" );
-       tfa98xx_firmware_put(tfa98xx, TFA98XX_FW_SPEAKER, "tfa9890_left.speaker" );
-       tfa98xx_firmware_put(tfa98xx, TFA98XX_FW_CONFIG, "tfa9890.config" );
-       tfa98xx_firmware_put(tfa98xx, TFA98XX_FW_PRESET, "tfa9890_left_music.preset" );
-       tfa98xx_firmware_put(tfa98xx, TFA98XX_FW_EQUALIZER, "tfa9890_left_music.eq" );
-
+	return request_firmware_nowait(THIS_MODULE, FW_ACTION_HOTPLUG,
+									tfa98xx->fw_name[TFA98XX_FW_BOOT], 
+									tfa98xx->codec->dev, GFP_KERNEL,
+									tfa98xx, tfa98xx_container_loaded);
 }
 
 static int tfa98xx_probe(struct snd_soc_codec *codec)
 {
-	struct tfa98xx_priv *tfa98xx;
+	struct tfa98xx_priv *tfa98xx = snd_soc_codec_get_drvdata(codec);
 	int ret;
-
-	tfa98xx = kzalloc(sizeof(struct tfa98xx_priv), GFP_KERNEL);
-	if (tfa98xx == NULL) {
-		dev_err(codec->dev, "Failed to alloc tfa98xx_priv\n");
-		return -ENOMEM;
-	}
 
 	tfa98xx->codec = codec;
 	mutex_init(&tfa98xx->fw_lock);
 
-        if (snd_soc_write(codec, 0x40, 0x5a6b) < 0)
-		dev_err(codec->dev, "Failed to write value 0x5a6b to addr 0x40\n");
-        if (snd_soc_write(codec, 0x59, 0x05cf) < 0)
-		dev_err(codec->dev, "Failed to write value 0x05cf to addr 0x59\n");
-        if (snd_soc_write(codec, 0x40, 0x0000) < 0)
-		dev_err(codec->dev, "Failed to write value 0x0000 to addr 0x40\n");
-        request_firmware_nowait(THIS_MODULE, FW_ACTION_HOTPLUG,
-                                   "tfa9890_boot.patch", codec->dev, GFP_KERNEL, tfa98xx, tfa98xx_container_loaded);
-
-	if (snd_soc_update_bits_locked(codec, TFA98XX_AUDIO_CTR,
-			TFA989X_AUDIO_CTR_BSSS_MSK, 0) < 0)
-		dev_err(codec->dev, "Failed to set Safeguard Threshold\n");
-
-	if (snd_soc_update_bits(codec, TFA98XX_BAT_PROT,
-			TFA989X_BAT_PROT_BSST_MSK, 32) < 0)
-		dev_err(codec->dev, "Failed to set Safeguard Threshold\n");
+	tfa98xx_load_container(tfa98xx);
 
 	INIT_DELAYED_WORK(&tfa98xx->monitor_work, tfa98xx_monitor);
 	INIT_DELAYED_WORK(&tfa98xx->download_work, tfa98xx_download);
@@ -992,8 +975,8 @@ static int tfa98xx_firmware_put(struct tfa98xx_priv *tfa98xx, unsigned long id, 
 	const struct firmware *fw;
 	int ret;
 
-        printk("tfa98xx_firmware_put id: %u name: %s\n", (unsigned int) id, name );
-        codec = tfa98xx->codec;
+	printk("tfa98xx_firmware_put id: %u name: %s\n", (unsigned int) id, name );
+	codec = tfa98xx->codec;
 
 	ret = request_firmware(&fw, name, codec->dev);
 	if (ret < 0) {
@@ -1002,7 +985,6 @@ static int tfa98xx_firmware_put(struct tfa98xx_priv *tfa98xx, unsigned long id, 
 	}
 
 	mutex_lock(&tfa98xx->fw_lock);
-	strcpy(tfa98xx->fw_name[id], name);
 	if (tfa98xx->fw[id] == NULL || /* no firmware yet */
 	    tfa98xx->fw[id]->size != fw->size || /* or change */
 	    memcmp(tfa98xx->fw[id]->data, fw->data, fw->size)) {
@@ -1373,11 +1355,74 @@ static struct snd_soc_dai_driver tfa98xx_dai = {
 	.symmetric_rates = 1,
 };
 
+static int tfa98xx_parse_dt(struct device *dev, struct tfa98xx_priv *tfa98xx,
+	struct device_node *np)
+{
+	char const *pstr;
+
+	if (!of_property_read_string(np, "nxt,fw-boot", &pstr))
+		strcpy(tfa98xx->fw_name[TFA98XX_FW_BOOT], pstr);
+	else
+		dev_warn(dev, "Failed to read fw-boot\n");
+
+	if (!of_property_read_string(np, "nxt,fw-rom", &pstr))
+		strcpy(tfa98xx->fw_name[TFA98XX_FW_ROM], pstr);
+	else
+		dev_warn(dev, "Failed to read fw-rom\n");
+
+	if (!of_property_read_string(np, "nxt,fw-speaker", &pstr))
+		strcpy(tfa98xx->fw_name[TFA98XX_FW_SPEAKER], pstr);
+	else
+		dev_warn(dev, "Failed to read fw-speaker\n");
+
+	if (!of_property_read_string(np, "nxt,fw-config", &pstr))
+		strcpy(tfa98xx->fw_name[TFA98XX_FW_CONFIG], pstr);
+	else
+		dev_warn(dev, "Failed to read fw-config\n");
+
+	if (!of_property_read_string(np, "nxt,fw-preset", &pstr))
+		strcpy(tfa98xx->fw_name[TFA98XX_FW_PRESET], pstr);
+	else
+		dev_warn(dev, "Failed to read fw-preset\n");
+
+	if (!of_property_read_string(np, "nxt,fw-eq", &pstr))
+		strcpy(tfa98xx->fw_name[TFA98XX_FW_EQUALIZER], pstr);
+	else
+		dev_warn(dev, "Failed to read fw-eq\n");
+
+	return 0;
+}
+
 static int tfa98xx_i2c_probe(struct i2c_client *client,
 			     const struct i2c_device_id *id)
 {
+	int ret;
+	struct tfa98xx_priv *tfa98xx;
+	struct device_node *np = client->dev.of_node;
+
+	tfa98xx = kzalloc(sizeof(struct tfa98xx_priv), GFP_KERNEL);
+	if (tfa98xx == NULL) {
+		dev_err(&client->dev, "Failed to alloc tfa98xx_priv\n");
+		goto err;
+	}
+
+	if (np) {
+		ret = tfa98xx_parse_dt(&client->dev, tfa98xx, np);
+		if (ret) {
+			dev_err(&client->dev, "Failed to parse DT node\n");
+			goto free_mem;
+		}
+	} else
+		goto free_mem;
+
+	i2c_set_clientdata(client, tfa98xx);
+
 	return snd_soc_register_codec(&client->dev,
 			&tfa98xx_drv, &tfa98xx_dai, 1);
+free_mem:
+	kfree(tfa98xx);
+err:
+	return -ENOMEM;
 }
 
 static int tfa98xx_i2c_remove(struct i2c_client *client)
