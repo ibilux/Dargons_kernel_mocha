@@ -1415,7 +1415,70 @@ static int __init tegra12_dvfs_register_cpu_vmax_cdev(void)
 }
 late_initcall(tegra12_dvfs_register_cpu_vmax_cdev);
 
- /* Setup GPU */
+
+/*
+ * Initialize thermal capping trips and rates: for each cap point (Tk, Vk) find
+ * min{ maxF(V <= Vk, j), j >= j0 }, where j0 is index for minimum scaling
+ * trip-point above Tk with margin: j0 = min{ j, Tj >= Tk - margin }.
+ */
+#define CAP_TRIP_ON_SCALING_MARGIN	5
+static void __init init_gpu_cap_rates(struct dvfs *gpu_dvfs,
+	struct dvfs_rail *rail, int thermal_ranges, int freqs_num)
+{
+	int i, j, k;
+
+ 	for (k = 0; k < rail->vmax_cdev->trip_temperatures_num; k++) {
+		int cap_tempr = vdd_gpu_vmax_trips_table[k];
+		int cap_level = vdd_gpu_therm_caps_table[k];
+		unsigned long cap_freq = clk_get_max_rate(vgpu_cap_clk);
+
+ 		for (j = 0; j < thermal_ranges; j++) {
+			if ((j < thermal_ranges - 1) &&	/* vts trips=ranges-1 */
+			    (rail->vts_cdev->trip_temperatures[j] +
+			    CAP_TRIP_ON_SCALING_MARGIN < cap_tempr))
+				continue;
+
+ 			for (i = 1; i < freqs_num; i++) {
+				if (gpu_millivolts[j][i] > cap_level)
+					break;
+			}
+			cap_freq = min(cap_freq, gpu_dvfs->freqs[i - 1]);
+		}
+		gpu_cap_rates[k] = cap_freq * gpu_dvfs->freqs_mult;
+	}
+}
+
+static int __init init_gpu_rail_thermal_caps(struct dvfs *gpu_dvfs,
+	struct dvfs_rail *rail, int thermal_ranges, int freqs_num)
+{
+	const char *cap_clk_name = "cap.vgpu.gbus";
+
+ 	if (!rail->vmax_cdev)
+		return 0;
+
+ 	vgpu_cap_clk = tegra_get_clock_by_name(cap_clk_name);
+
+	if (!vgpu_cap_clk) {
+		WARN(1, "tegra12_dvfs: %s: failed to get cap clock %s\n",
+		     rail->reg_id, cap_clk_name);
+		goto err_out;
+	}
+
+ 	if (tegra_dvfs_rail_of_init_vmax_thermal_profile(
+		vdd_gpu_vmax_trips_table, vdd_gpu_therm_caps_table, rail, NULL))
+		goto err_out;
+
+ 	if (rail->vts_cdev)
+		init_gpu_cap_rates(gpu_dvfs, rail, thermal_ranges, freqs_num);
+
+	return 0;
+
+ err_out:
+	rail->vmax_cdev = NULL;
+
+	return -ENODEV;
+}
+
 
  /*
  * Setup gpu dvfs tables from cvb data, determine nominal voltage for gpu rail,
@@ -1675,6 +1738,10 @@ static int tegra12_gpu_volt_cap_apply(int *cap_idx, int new_idx, int level)
 
  	if (!IS_ERR_VALUE(cap_rate))
 		ret = clk_set_rate_locked(vgpu_cap_clk, cap_rate);
+	else
+		pr_err("tegra12_dvfs: Failed to find GPU cap rate for %dmV\n",
+			level);
+
 
  	clk_unlock_restore(vgpu_cap_clk, &flags);
 
