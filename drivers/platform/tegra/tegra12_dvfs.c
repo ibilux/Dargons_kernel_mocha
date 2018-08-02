@@ -1256,6 +1256,25 @@ static int __init find_gpu_vmin_at_fmax(
 }
 
 /*
+ * Determine minimum voltage safe at maximum frequency across all temperature
+ * ranges.
+ */
+static int __init find_gpu_vmin_at_fmax(
+	struct dvfs *gpu_dvfs, int thermal_ranges, int freqs_num)
+{
+	int j, vmin;
+	
+ 	/*
+	 * For voltage scaling row in each temperature range find minimum
+	 * voltage at maximum frequency and return max Vmin across ranges.
+	 */
+	for (vmin = 0, j = 0; j < thermal_ranges; j++)
+		vmin = max(vmin, gpu_millivolts[j][freqs_num-1]);
+		
+ 	return vmin;
+}
+
+/*
  * Init thermal scaling trips, find number of thermal ranges; note that the 1st
  * trip-point is used for voltage calculations within the lowest range, but
  * should not be actually set. Hence, at least 2 scaling trip-points must be
