@@ -1359,6 +1359,10 @@ static void __init init_cpu_dvfs_table(int *cpu_max_freq_index)
 	BUG_ON((i == ARRAY_SIZE(cpu_cvb_dvfs_table)) || ret);
 }
 
+/*
+ * Common for both CPU clusters: initialize thermal profiles, and register
+ * Vmax cooling device.
+ */
 static int __init init_cpu_rail_thermal_profile(struct dvfs *cpu_dvfs)
 {
 	struct dvfs_rail *rail = &tegra12_dvfs_rail_vdd_cpu;
@@ -1377,6 +1381,29 @@ static int __init init_cpu_rail_thermal_profile(struct dvfs *cpu_dvfs)
 
  	return 0;
 }
+
+/*
+ * CPU Vmax cooling device registration for pll mode:
+ * - Use CPU capping method provided by CPUFREQ platform driver
+ * - Skip registration if most aggressive cap is above maximum voltage
+ */
+static int __init tegra12_dvfs_register_cpu_vmax_cdev(void)
+{
+	struct dvfs_rail *rail;
+	
+ 	rail = &tegra12_dvfs_rail_vdd_cpu;
+	rail->apply_vmax_cap = tegra_cpu_volt_cap_apply;
+	if (rail->vmax_cdev) {
+		int i = rail->vmax_cdev->trip_temperatures_num;
+		if (i && rail->therm_mv_caps[i-1] < rail->nominal_millivolts)
+			tegra_dvfs_rail_register_vmax_cdev(rail);
+	}
+	
+	return 0;
+}
+late_initcall(tegra12_dvfs_register_cpu_vmax_cdev);
+
+ /* Setup GPU */
 
  /*
  * Setup gpu dvfs tables from cvb data, determine nominal voltage for gpu rail,
@@ -1908,6 +1935,19 @@ static struct core_bus_rates_table tegra12_emc_rates_sysfs = {
 		.attr = {.name = "emc_available_rates", .mode = 0444} },
 };
 
+static void __init tegra12_dvfs_register_core_vmax_cdev(void)
+{
+	/* FIXME: implement */
+}
+
+ /*
+ * Initialize core capping interfaces. It can happen only after DVFS is ready.
+ * Therefore this late initcall must be invoked after clock late initcall where
+ * DVFS is initialized -- assured by the order in Make file. In addition core
+ * Vmax cooling device operation depends on core cap interface. Hence, register
+ * core Vmax cooling device here as well.
+ */
+
 static int __init tegra12_dvfs_init_core_cap(void)
 {
 	int ret;
@@ -1938,6 +1978,11 @@ static int __init tegra12_dvfs_init_core_cap(void)
 
 	tegra_core_cap_debug_init();
 	pr_info("tegra dvfs: tegra sysfs cap interface is initialized\n");
+
+	/* Register core Vmax cooling device */
+	tegra12_dvfs_register_core_vmax_cdev();
+
+ 	/* Init core shared buses rate limit interfaces */
 
 	gpu_kobj = kobject_create_and_add("tegra_gpu", kernel_kobj);
 	if (!gpu_kobj) {
