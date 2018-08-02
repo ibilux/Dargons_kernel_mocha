@@ -1235,6 +1235,68 @@ static int __init set_cpu_dvfs_data(unsigned long max_freq,
 	return 0;
 }
 
+
+/*
+ * Determine minimum voltage safe at maximum frequency across all temperature
+ * ranges.
+ */
+static int __init find_gpu_vmin_at_fmax(
+	struct dvfs *gpu_dvfs, int thermal_ranges, int freqs_num)
+{
+	int j, vmin;
+	
+ 	/*
+	 * For voltage scaling row in each temperature range find minimum
+	 * voltage at maximum frequency and return max Vmin across ranges.
+	 */
+	for (vmin = 0, j = 0; j < thermal_ranges; j++)
+		vmin = max(vmin, gpu_millivolts[j][freqs_num-1]);
+		
+ 	return vmin;
+}
+
+/*
+ * Init thermal scaling trips, find number of thermal ranges; note that the 1st
+ * trip-point is used for voltage calculations within the lowest range, but
+ * should not be actually set. Hence, at least 2 scaling trip-points must be
+ * specified in DT; number of scaling ranges = number of trips in DT; number
+ * of scaling trips bound to scaling cdev is number of trips in DT minus one.
+ *
+ * Failure to get/configure trips may not be fatal for boot - let it try,
+ * anyway, with appropriate WARNING. It must not happen with production DT, of
+ * course.
+ */
+static int __init init_gpu_rail_thermal_scaling(struct dvfs_rail *rail,
+						struct gpu_cvb_dvfs *d)
+{
+	int thermal_ranges = 1;	/* No thermal depndencies */
+
+ 	if (!rail->vts_cdev)
+		return 1;
+
+ 	thermal_ranges = of_tegra_dvfs_rail_get_cdev_trips(
+		rail->vts_cdev, d->vts_trips_table, d->therm_floors_table,
+		&rail->alignment, true);
+
+ 	if (thermal_ranges < 0) {
+		WARN(1, "tegra12_dvfs: %s: failed to get trips from DT\n",
+		     rail->reg_id);
+		return 1;
+	}
+
+ 	if (thermal_ranges < 2) {
+		WARN(1, "tegra12_dvfs: %s: only %d trip (must be at least 2)\n",
+		     rail->reg_id, thermal_ranges);
+		return 1;
+	}
+
+ 	rail->vts_cdev->trip_temperatures_num = thermal_ranges - 1;
+	rail->vts_cdev->trip_temperatures = d->vts_trips_table;
+
+	return thermal_ranges;
+}
+
+
 /* Automotive gpu_dvfs specific
  * GPU voltage (mV) = c0 + c1*speedo + c2*speedo*speedo if T > Tlimit
  * GPU voltage (mV) = c3 if T < Tlimit
@@ -1309,9 +1371,11 @@ static int __init set_atomtv_gpu_dvfs_data(unsigned long max_freq,
 	gpu_dvfs->speedo_id = d->speedo_id;
 	gpu_dvfs->process_id = d->process_id;
 	gpu_dvfs->freqs_mult = d->freqs_mult;
-	gpu_dvfs->dvfs_rail->nominal_millivolts = d->max_mv;
-
+	
 	*max_freq_index = i - 1;
+	
+	gpu_dvfs->dvfs_rail->nominal_millivolts = min(d->max_mv,
+		find_gpu_vmin_at_fmax(gpu_dvfs, thermal_ranges, i));
 
 	return 0;
 }
@@ -1620,7 +1684,9 @@ static int __init set_gpu_dvfs_data(unsigned long max_freq,
 	gpu_dvfs->speedo_id = d->speedo_id;
 	gpu_dvfs->process_id = d->process_id;
 	gpu_dvfs->freqs_mult = d->freqs_mult;
-	gpu_dvfs->dvfs_rail->nominal_millivolts = d->max_mv;
+	
+	gpu_dvfs->dvfs_rail->nominal_millivolts = min(d->max_mv,
+		find_gpu_vmin_at_fmax(gpu_dvfs, thermal_ranges, i));
 
 	/*Populate gpu fmax at vmin*/
 	gpu_dvfs->fmax_at_vmin_safe_t = d->freqs_mult *
