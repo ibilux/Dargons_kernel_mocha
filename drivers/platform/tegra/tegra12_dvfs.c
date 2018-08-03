@@ -786,6 +786,9 @@ static struct gpu_cvb_dvfs gpu_cvb_dvfs_table[] = {
 		/* Embedded SKU CD575M Always On*/
 		.speedo_id =  4,
 		.process_id = -1,
+		.pll_tune_data = {
+			.min_millivolts = 650,
+		},
 		.max_mv = 1090,
 		.freqs_mult = KHZ,
 		.speedo_scale = 100,
@@ -809,7 +812,6 @@ static struct gpu_cvb_dvfs gpu_cvb_dvfs_table[] = {
 			{  804000, {  }, { 1524225, -20064, -254,  -119,   4272, -155}, },
 			{       0, {  }, { }, },
 		},
-		.cvb_vmin =  {  0, {  }, { 1180000, -18900,    0,     0,  -6110,    0}, },
 		.vmin_trips_table = { 15, },
 		.therm_floors_table = { 900, },
 		.vts_trips_table = { -10, 10, 30, 50, 70, },
@@ -818,6 +820,9 @@ static struct gpu_cvb_dvfs gpu_cvb_dvfs_table[] = {
 		/* Embedded SKU CD575MI Always On*/
 		.speedo_id =  5,
 		.process_id = -1,
+		.pll_tune_data = {
+			.min_millivolts = 950,
+		},
 		.max_mv = 1070,
 		.freqs_mult = KHZ,
 		.speedo_scale = 100,
@@ -840,13 +845,15 @@ static struct gpu_cvb_dvfs gpu_cvb_dvfs_table[] = {
 			{  756000, {  }, { 1494061, -18331, -274,  }, },
 			{       0, {  }, { }, },
 		},
-		.cvb_vmin =  { 0, { } , { 950000, }, },
-		.vts_trips_table = { -40, 0,},
+
 	},
 	{
 		/* Embedded SKU CD575MI */
 		.speedo_id =  6,
 		.process_id = -1,
+		.pll_tune_data = {
+			.min_millivolts = 950,
+		},
 		.max_mv = 1200,
 		.freqs_mult = KHZ,
 		.speedo_scale = 100,
@@ -871,12 +878,14 @@ static struct gpu_cvb_dvfs gpu_cvb_dvfs_table[] = {
                         {  852000, {  }, { 1608418, -21643, -269,  }, },
 			{       0, {  }, { }, },
 		},
-		.cvb_vmin =  { 0, { } , { 950000, }, },
-		.vts_trips_table = { -40, 0,},
+
 	},
 	{
 		.speedo_id =  -1,
 		.process_id = -1,
+		.pll_tune_data = {
+			.min_millivolts = 650,
+		},
 		.max_mv = 1200,
 		.freqs_mult = KHZ,
 		.speedo_scale = 100,
@@ -906,7 +915,6 @@ static struct gpu_cvb_dvfs gpu_cvb_dvfs_table[] = {
 			{ 1008000, {  }, { 2015834, -44439,  271,  -596,   4730, 1222}, },
 			{       0, {  }, { }, },
 		},
-		.cvb_vmin =  {  0, {  }, { 1180000, -18900,    0,     0,  -6110,    0}, },
 		.vmin_trips_table = { 15, },
 		.therm_floors_table = { 900, },
 		.vts_trips_table = { -10, 10, 30, 50, 70, },
@@ -1544,13 +1552,19 @@ static int __init init_gpu_rail_thermal_caps(struct dvfs *gpu_dvfs,
 static int __init set_gpu_dvfs_data(unsigned long max_freq,
 	struct gpu_cvb_dvfs *d, struct dvfs *gpu_dvfs, int *max_freq_index)
 {
-	int i, j, thermal_ranges, mv;
+	int i, j, thermal_ranges, mv, min_mv;
 	struct cvb_dvfs_table *table = NULL;
 	int speedo = tegra_gpu_speedo_value();
 	struct dvfs_rail *rail = &tegra12_dvfs_rail_vdd_gpu;
 	struct rail_alignment *align = &rail->alignment;
 
 	d->max_mv = round_voltage(d->max_mv, align, false);
+	min_mv = d->pll_tune_data.min_millivolts;
+	if (min_mv < rail->min_millivolts) {
+		pr_debug("tegra12_dvfs: gpu min %dmV below rail min %dmV\n",
+			 min_mv, rail->min_millivolts);
+		min_mv = rail->min_millivolts;
+	}
 
 	/*
 	 * Init thermal trips, find number of thermal ranges; note that the
@@ -1568,25 +1582,12 @@ static int __init set_gpu_dvfs_data(unsigned long max_freq,
 		     thermal_ranges);
 
 	/*
-	 * Use CVB table to calculate Vmin for each temperature range
+	 * Apply fixed thermal floor for each temperature range
 	 */
-	mv = get_cvb_voltage(
-		speedo, d->speedo_scale, &d->cvb_vmin.cvb_pll_param);
 	for (j = 0; j < thermal_ranges; j++) {
-		int mvj = mv;
-		int t = rail->vts_cdev->trip_temperatures[j];
+		mv = max(min_mv, d->therm_floors_table[j]);
+		gpu_vmin[j] = round_voltage(mv, align, true);
 
-		/* add Vmin thermal offset for this trip-point */
-		mvj += get_cvb_t_voltage(speedo, d->speedo_scale,
-			t, d->thermal_scale, &d->cvb_vmin.cvb_pll_param);
-		mvj = round_cvb_voltage(mvj, d->voltage_scale, align);
-		if (mvj < rail->min_millivolts) {
-			WARN(1, "tegra12_dvfs: gpu min %dmV below rail min %dmV\n",
-			     mvj, rail->min_millivolts);
-			mvj = rail->min_millivolts;
-		}
-
-		gpu_vmin[j] = mvj;
 	}
 
 	/*
@@ -1624,8 +1625,12 @@ static int __init set_gpu_dvfs_data(unsigned long max_freq,
 					break;
 			}
 
-			/* update voltage for adjacent ranges bounded by this
-			   trip-point (cvb & dvfs are transpose matrices) */
+			/*
+			 * Update voltage for adjacent ranges bounded by this
+			 * trip-point (cvb & dvfs are transpose matrices, and
+			 * cvb freq row index is column index for dvfs matrix)
+			 */
+
 			gpu_millivolts[j][i] = mvj;
 			if (j && (gpu_millivolts[j-1][i] < mvj))
 				gpu_millivolts[j-1][i] = mvj;
