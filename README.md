@@ -1,5 +1,5 @@
 # Custom kernel for Xiaomi MiPad 1 (MOCHA)
-# Kernel version 3.10.107
+# Kernel version 3.10.108
 
 You need to flash tos.img in order for all 4 cores to work otherwise only one core will work!
 Disable ADF in the config if you want use this kernel with old blobs, without it kernel works only with blobs from Nexus 9.
