@@ -479,3 +479,4 @@ void nvhost_job_dump(struct device *dev, struct nvhost_job *job)
 	dev_info(dev, "    NUM_HANDLES %d\n",
 		job->num_unpins);
 }
+
