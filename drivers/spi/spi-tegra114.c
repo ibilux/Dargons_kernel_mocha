@@ -1656,3 +1656,4 @@ MODULE_ALIAS("platform:spi-tegra114");
 MODULE_DESCRIPTION("NVIDIA Tegra114/124 SPI Controller Driver");
 MODULE_AUTHOR("Laxman Dewangan <ldewangan@nvidia.com>");
 MODULE_LICENSE("GPL v2");
+
