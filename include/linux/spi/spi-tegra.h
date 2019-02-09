@@ -43,3 +43,4 @@ struct tegra_spi_device_controller_data {
 };
 
 #endif /* _LINUX_SPI_TEGRA_H */
+
