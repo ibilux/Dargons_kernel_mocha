@@ -165,3 +165,4 @@ switch_mm(struct mm_struct *prev, struct mm_struct *next,
 #define activate_mm(prev,next)	switch_mm(prev, next, NULL)
 
 #endif
+
