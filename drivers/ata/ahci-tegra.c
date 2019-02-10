@@ -458,6 +458,13 @@ static const struct ata_port_info ahci_port_info = {
 	.port_ops	= &tegra_ahci_ops,
 };
 
+#ifdef CONFIG_TEGRA_SATA_IDLE_POWERGATE
+static const struct dev_pm_ops tegra_ahci_dev_rt_ops = {
+	.runtime_suspend = tegra_ahci_runtime_suspend,
+	.runtime_resume = tegra_ahci_runtime_resume,
+};
+#endif
+
 static const struct of_device_id of_ahci_tegra_match[] = {
 	{ .compatible = "nvidia,tegra114-ahci-sata", },
 	{},
@@ -2746,3 +2753,4 @@ MODULE_VERSION(DRV_VERSION);
 
 module_init(ahci_init);
 module_exit(ahci_exit);
+
