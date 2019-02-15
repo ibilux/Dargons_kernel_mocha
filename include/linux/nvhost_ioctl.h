@@ -517,3 +517,4 @@ enum nvhost_module_id {
 	sizeof(struct nvhost_ctrl_syncpt_waitmex_args)
 
 #endif
+

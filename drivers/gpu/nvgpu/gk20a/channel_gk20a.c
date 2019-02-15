@@ -2194,3 +2194,4 @@ long gk20a_channel_ioctl(struct file *filp,
 
 	return err;
 }
+
