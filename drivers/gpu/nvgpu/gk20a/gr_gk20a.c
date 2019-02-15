@@ -6960,3 +6960,4 @@ void gk20a_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.set_hww_esr_report_mask = gr_gk20a_set_hww_esr_report_mask;
 	gops->gr.setup_alpha_beta_tables = gr_gk20a_setup_alpha_beta_tables;
 }
+
