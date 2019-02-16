@@ -259,3 +259,4 @@ int nvmap_reserve_pages(struct nvmap_handle **handles, u32 *offsets, u32 *sizes,
 	return 0;
 }
 
+
