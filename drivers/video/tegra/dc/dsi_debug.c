@@ -497,3 +497,4 @@ void tegra_dc_dsi_debug_create(struct tegra_dc_dsi_data *dsi)
 EXPORT_SYMBOL(tegra_dc_dsi_debug_create);
 
 #endif
+
