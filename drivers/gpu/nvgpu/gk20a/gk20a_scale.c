@@ -34,6 +34,9 @@
 #include "clk_gk20a.h"
 #include "gk20a_scale.h"
 
+unsigned long gpu_load;
+
+
 static ssize_t gk20a_scale_load_show(struct device *dev,
 				     struct device_attribute *attr,
 				     char *buf)
@@ -166,6 +169,7 @@ static void update_load_estimate_gpmu(struct platform_device *pdev)
 	profile->last_event_time = t;
 	gk20a_pmu_load_norm(g, &busy_time);
 	profile->dev_stat.busy_time = (busy_time * dt) / 1000;
+    gpu_load = busy_time;
 }
 
 /*
