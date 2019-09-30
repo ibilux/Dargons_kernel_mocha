@@ -403,7 +403,7 @@ static enum power_supply_property bq27x00_battery_props[] = {
 	POWER_SUPPLY_PROP_ENERGY_NOW
 };
 
-static struct bq27x00_device_info *the_di;
+
 
 static unsigned int debug_dataflash_interval = 20*60*1000;
 
@@ -2404,7 +2404,7 @@ static int bq27x00_battery_probe(struct i2c_client *client,
 	/* Update firmware */
 	update_firmware(di, pdata);
 
-	the_di = di;
+
 
 	return 0;
 
