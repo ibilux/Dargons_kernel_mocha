@@ -15,7 +15,6 @@ config CUSTOM_DT2W
 	bool "Custom dt2w implementation"
 	default n
 
- touchscreen driver
 config TOUCHSCREEN_LR388K7
 	tristate "Sharp LR388K7 touchscreen"
 	depends on SPI_MASTER
