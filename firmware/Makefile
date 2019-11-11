@@ -127,19 +127,6 @@ fw-shipped-$(CONFIG_TOUCHSCREEN_SYNAPTICS_DSX) += synaptics_7040_firmware.fw \
 
 fw-shipped-$(CONFIG_BATTERY_BQ27x00) += 0104_lgc.dffs \
 					0204_atl.dffs
-fw-shipped-$(CONFIG_SND_SOC_TFA98XX) += tfa9890.config \
-					tfa9890_boot.patch \
-					tfa9890_left.speaker \
-					tfa9890_left_music.eq \
-					tfa9890_left_music.preset \
-					tfa9890_left_voice.eq \
-					tfa9890_left_voice.preset \
-					tfa9890_right.speaker \
-					tfa9890_right_music.eq \
-					tfa9890_right_music.preset \
-					tfa9890_right_voice.eq \
-					tfa9890_right_voice.preset \
-					tfa9890_rom.patch
 
 else
 fw-shipped- += keyspan/mpr.fw keyspan/usa18x.fw keyspan/usa19.fw	\
