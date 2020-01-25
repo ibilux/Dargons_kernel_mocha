@@ -39,7 +39,7 @@ function generate_version()
 {
 	if [[ -f "$KERNEL_DIR/.git/HEAD"  &&  -f "$KERNEL_DIR/anykernel/anykernel.sh" ]]; then
 		local updated_kernel_name
-		eval "$(awk -F"="  '/kernel.string/{print "anykernel_name="$2}' $HOME/kernel/anykernel/anykernel.sh)" 
+		eval "$(awk -F"="  '/kernel.string/{print "anykernel_name="$2}' $KERNEL_DIR/anykernel/anykernel.sh)" 
 		eval "$(echo $kernel_name | awk -F"-"  '{print "current_branch="$2}')"
 		if [[ "$current_branch" != "stable" ]]; then
 			if [[ ! -f "$KERNEL_DIR/version" ]]; then
