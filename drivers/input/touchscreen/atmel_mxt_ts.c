@@ -29,8 +29,9 @@
 #include <linux/string.h>
 #include <linux/wait.h>
 #include <linux/of_gpio.h>
+#ifdef CONFIG_CUSTOM_DT2W
 #include <linux/input/dt2w.h>
-#include <linux/fb.h>
+#endif
 
 /* Version */
 #define MXT_VER_20		20
@@ -469,7 +470,9 @@
 #define MXT_MAX_FINGER_NUM	10
 #define BOOTLOADER_1664_1188	1
 
+#ifdef CONFIG_CUSTOM_DT2W
 struct notifier_block fb_notif_atm;
+#endif
 
 struct mxt_info {
 	u8 family_id;
@@ -525,6 +528,8 @@ struct mxt_mode_switch {
 
 /* Each client has this additional data */
 struct mxt_data {
+	struct mutex input_mutex;
+	struct mutex calib_mutex;
 	struct i2c_client *client;
 	struct input_dev *input_dev;
 	const struct mxt_platform_data *pdata;
@@ -555,6 +560,7 @@ struct mxt_data {
 	u8 t100_tchaux_bits;
 	unsigned long keystatus;
 	u8 vendor_id;
+	u8 user_id;
 	int current_index;
 	u8 update_flag;
 	u8 test_result[6];
@@ -620,6 +626,10 @@ struct mxt_data {
 	u8 T109_reportid;
 	u16 T38_address;
 	u16 T71_address;
+
+#ifdef CONFIG_FB
+	struct notifier_block fb_notifier;
+#endif
 };
 
 static struct mxt_suspend mxt_save[] = {
@@ -650,6 +660,14 @@ static const struct mxt_i2c_address_pair mxt_i2c_addresses[] = {
 	{ 0x35, 0x5b },
 #endif
 };
+
+#ifdef CONFIG_FB
+static int mxt_fb_notifier_cb(struct notifier_block *self,
+		unsigned long event, void *data);
+#endif
+
+static int mxt_ts_resume(struct device *dev);
+static int mxt_ts_suspend(struct device *dev);
 
 static int mxt_bootloader_read(struct mxt_data *data, u8 *val, unsigned int count)
 {
@@ -1138,6 +1156,8 @@ static void mxt_proc_t6_messages(struct mxt_data *data, u8 *msg)
 	u32 crc;
 	u8 status = msg[1];
 
+	mutex_lock(&data->calib_mutex);
+
 	crc = msg[2] | (msg[3] << 8) | (msg[4] << 16);
 
 	if (crc != data->config_crc && data->config_crc == 0) {
@@ -1157,6 +1177,8 @@ static void mxt_proc_t6_messages(struct mxt_data *data, u8 *msg)
 			(status & MXT_STATUS_CAL) ? "CAL " : "",
 			(status & MXT_STATUS_CFGERR) ? "CFGERR " : "",
 			(status & MXT_STATUS_COMSERR) ? "COMSERR " : "");
+
+	mutex_unlock(&data->calib_mutex);
 }
 
 static void mxt_input_sync(struct mxt_data *data)
@@ -1187,6 +1209,8 @@ static void mxt_proc_t9_messages(struct mxt_data *data, u8 *message)
 			id, data->num_touchids);
 		return;
 	}
+
+	mutex_lock(&data->input_mutex);
 
 	status = message[1];
 
@@ -1236,13 +1260,17 @@ static void mxt_proc_t9_messages(struct mxt_data *data, u8 *message)
 		mxt_input_sync(data);
 		input_mt_report_slot_state(input_dev, MT_TOOL_FINGER, 0);
 
+#ifdef CONFIG_CUSTOM_DT2W
 		if (detect_dt2w_event(x, y) && data->wakeup_gesture_mode) {
-			input_event(input_dev, EV_KEY, KEY_POWER, 1);
+			input_report_key(input_dev, KEY_WAKEUP, 1);
 			input_sync(input_dev);
-			input_event(input_dev, EV_KEY, KEY_POWER, 0);
+			input_report_key(input_dev, KEY_WAKEUP, 0);
 			input_sync(input_dev);
 		}
+#endif
 	}
+
+	mutex_unlock(&data->input_mutex);
 }
 
 static int mxt_do_diagnostic(struct mxt_data *data, u8 mode)
@@ -1298,6 +1326,8 @@ static void mxt_proc_t100_messages(struct mxt_data *data, u8 *message)
 			id, data->num_touchids);
 		return;
 	}
+
+	mutex_lock(&data->input_mutex);
 
 	if (id == 0) {
 		status = message[1];
@@ -1359,14 +1389,18 @@ static void mxt_proc_t100_messages(struct mxt_data *data, u8 *message)
 			mxt_input_sync(data);
 			input_mt_report_slot_state(input_dev, MT_TOOL_FINGER, 0);
 
+#ifdef CONFIG_CUSTOM_DT2W
 			if (detect_dt2w_event(x, y) && data->wakeup_gesture_mode) {
-				input_event(input_dev, EV_KEY, KEY_POWER, 1);
+				input_report_key(input_dev, KEY_WAKEUP, 1);
 				input_sync(input_dev);
-				input_event(input_dev, EV_KEY, KEY_POWER, 0);
+				input_report_key(input_dev, KEY_WAKEUP, 0);
 				input_sync(input_dev);
 			}
+#endif
 		}
 	}
+
+	mutex_unlock(&data->input_mutex);
 }
 
 static void mxt_proc_t15_messages(struct mxt_data *data, u8 *msg)
@@ -1380,12 +1414,14 @@ static void mxt_proc_t15_messages(struct mxt_data *data, u8 *msg)
 	unsigned long keystates = le32_to_cpu(msg[2]);
 	int index = data->current_index;
 
+	mutex_lock(&data->input_mutex);
+
 	if (!input_dev || data->driver_paused)
-		return;
+		goto exit;
 
         if(!data->enable_keys) {
                 dev_err(&data->client->dev, "keyarray is disabled\n");
-                return;
+                goto exit;
         }
 
 	for (key = 0; key < pdata->config_array[index].key_num; key++) {
@@ -1407,6 +1443,9 @@ static void mxt_proc_t15_messages(struct mxt_data *data, u8 *msg)
 
 	if (sync)
 		input_sync(input_dev);
+
+exit:
+	mutex_unlock(&data->input_mutex);
 }
 
 static void mxt_proc_t19_messages(struct mxt_data *data, u8 *msg)
@@ -2133,19 +2172,28 @@ static int mxt_probe_power_cfg(struct mxt_data *data)
 	return 0;
 }
 
-static const char *mxt_get_config(struct mxt_data *data)
+static const char *mxt_get_config(struct mxt_data *data, bool is_default)
 {
 	struct device *dev = &data->client->dev;
 	const struct mxt_platform_data *pdata = data->pdata;
 	int i;
 
 	for (i = 0; i < pdata->config_array_size; i++) {
-		if (data->info.family_id == pdata->config_array[i].family_id &&
-			data->info.variant_id == pdata->config_array[i].variant_id) {
-			dev_info(dev, "select config %d, config name = %s\n", i, pdata->config_array[i].mxt_cfg_name);
-			data->current_index = i;
+ 		if (data->info.family_id == pdata->config_array[i].family_id &&
+ 			data->info.variant_id == pdata->config_array[i].variant_id &&
+ 			data->info.version == pdata->config_array[i].version &&
+ 			data->info.build == pdata->config_array[i].build) {
+ 			if (!is_default) {
+ 				if (data->user_id == pdata->config_array[i].user_id) {
+ 					dev_info(dev, "select config %d, config name = %s\n", i, pdata->config_array[i].mxt_cfg_name);
+ 					data->current_index = i;
 
-			return  pdata->config_array[i].mxt_cfg_name;
+ 					return  pdata->config_array[i].mxt_cfg_name;
+ 				}
+ 			} else {
+ 				data->current_index = i;
+ 				return  pdata->config_array[i].mxt_cfg_name;
+ 			}
 		}
 	}
 
@@ -2206,13 +2254,41 @@ static int mxt_backup_nv(struct mxt_data *data)
 	return 0;
 }
 
+static int mxt_read_user_id(struct mxt_data *data)
+{
+ 	struct device *dev = &data->client->dev;
+ 	int error;
+ 	u8 val;
+ 
+ 	error = mxt_read_object(data, MXT_SPT_USERDATA_T38, 0, &val);
+ 	if (error) {
+ 		dev_err(dev, "Failed to read t38 user id!\n");
+ 		return error;
+ 	}
+ 
+ 	data->user_id = val;
+ 
+ 	return 0;
+}
+
 static int mxt_check_reg_init(struct mxt_data *data)
 {
 	struct device *dev = &data->client->dev;
 	int ret;
 	const char *config_name = NULL;
+	bool is_recheck = false;
 
-	config_name = mxt_get_config(data);
+ 
+start:
+ 	ret = mxt_read_user_id(data);
+ 	if (ret) {
+ 		dev_err(dev, "Can not get user id, just give default one!\n");
+ 		config_name = mxt_get_config(data, true);
+ 		is_recheck = true;
+ 	} else {
+ 		config_name = mxt_get_config(data, false);
+ 		is_recheck = false;
+ 	}
 
 	if (config_name == NULL) {
 		dev_info(dev, "Not found matched config!\n");
@@ -2232,6 +2308,9 @@ static int mxt_check_reg_init(struct mxt_data *data)
 		dev_err(dev, "back nv failed!\n");
 		return ret;
 	}
+
+	if (is_recheck)
+ 		goto start;
 
 	ret = mxt_check_power_cfg_post_reset(data);
 	if (ret)
@@ -3634,7 +3713,7 @@ static int mxt_chip_reset(struct mxt_data *data)
 
 	error = mxt_initialize(data);
 
-	schedule_work(&data->self_tuning_work);
+	queue_work(system_power_efficient_wq, &data->self_tuning_work);
 
 	return error;
 }
@@ -3707,7 +3786,7 @@ static int mxt_input_event(struct input_dev *dev,
 				ms->data = data;
 				ms->mode = (u8)value;
 				INIT_WORK(&ms->switch_mode_work, mxt_switch_mode_work);
-				schedule_work(&ms->switch_mode_work);
+				queue_work(system_power_efficient_wq, &ms->switch_mode_work);
 			} else {
 				dev_err(&data->client->dev,
 					"Failed in allocating memory for mxt_mode_switch!\n");
@@ -3808,7 +3887,7 @@ static int mxt_proc_init(void)
 
 	buf = kzalloc(PATH_MAX, GFP_KERNEL);
 	if (buf)
-		path = "/sys/devices/platform/tegra12-i2c.3/i2c-3/3-004a";
+		path = "/sys/devices/platform/7000c700.i2c/i2c-3/3-004a";
 
 	proc_entry_tp = proc_mkdir("touchpanel", NULL);
 	if (proc_entry_tp == NULL) {
@@ -4053,7 +4132,7 @@ static int mxt_resume(struct device *dev)
 		data->is_stopped = 0;
 		mutex_unlock(&input_dev->mutex);
 	} else
-		schedule_work(&data->reset_work);
+		queue_work(system_power_efficient_wq, &data->reset_work);
 
 	return 0;
 }
@@ -4166,6 +4245,11 @@ static int mxt_initialize_input_device(struct mxt_data *data)
 							data->pdata->config_array[index].key_codes[i]);
 		}
 	}
+#endif
+
+#ifdef CONFIG_CUSTOM_DT2W
+	__set_bit(KEY_WAKEUP, input_dev->evbit);
+	input_set_capability(input_dev, EV_KEY, KEY_WAKEUP);
 #endif
 
 	input_set_drvdata(input_dev, data);
@@ -4371,10 +4455,25 @@ static int mxt_probe(struct i2c_client *client,
 		return -ENOMEM;
 	}
 
+#ifdef CONFIG_CUSTOM_DT2W
 	if (fb_notifier_register(&fb_notif_atm))
-		pr_err("%s: failed to register fb notifier\n", __func__);
+		dev_err(&client->dev, "%s: failed to register fb notifier\n", __func__);
 	else
-		pr_err("%s: fb notifier registered\n", __func__);
+		dev_err(&client->dev, "%s: fb notifier registered\n", __func__);
+#endif
+
+#ifdef CONFIG_FB
+	data->fb_notifier.notifier_call = mxt_fb_notifier_cb;
+	error = fb_register_client(&data->fb_notifier);
+	if (error < 0) {
+		dev_err(&client->dev,
+				"%s: Failed to register fb notifier client\n",
+				__func__);
+	}
+#endif
+
+	mutex_init(&data->input_mutex);
+	mutex_init(&data->calib_mutex);
 
 	data->state = INIT;
 
@@ -4527,7 +4626,7 @@ retry:
 
 	mxt_debugfs_init(data);
 	if (0)
-		schedule_work(&data->self_tuning_work);
+		queue_work(system_power_efficient_wq, &data->self_tuning_work);
 
 	mxt_auto_return(data->client);
 
@@ -4559,8 +4658,10 @@ err_reset_gpio_req:
 err_free_data:
 	kfree(data);
 
+#ifdef CONFIG_CUSTOM_DT2W
 	fb_notifier_unregister(&fb_notif_atm);
 	pr_err("%s: fb notifier unregistered\n", __func__);
+#endif
 
 	return error;
 }
@@ -4592,6 +4693,14 @@ static int mxt_remove(struct i2c_client *client)
 	if (gpio_is_valid(pdata->reset_gpio))
 		gpio_free(pdata->reset_gpio);
 
+#ifdef CONFIG_FB
+	fb_unregister_client(&data->fb_notifier);
+#endif
+
+#ifdef CONFIG_CUSTOM_DT2W
+	fb_notifier_unregister(&fb_notif_atm);
+#endif
+
 	kfree(data);
 	data = NULL;
 
@@ -4606,13 +4715,37 @@ static void mxt_shutdown(struct i2c_client *client)
 	data->state = SHUTDOWN;
 }
 
-#ifdef CONFIG_PM
+#ifdef CONFIG_FB
+static int mxt_fb_notifier_cb(struct notifier_block *self,
+		unsigned long event, void *data)
+{
+	int *transition;
+	struct fb_event *evdata = data;
+	struct mxt_data *mxt_data = container_of(self, 
+								struct mxt_data,
+								fb_notifier);
+
+	if (evdata && evdata->data && mxt_data) {
+		if (event == FB_EVENT_BLANK) {
+			transition = evdata->data;
+			if (*transition == FB_BLANK_POWERDOWN) {
+				mxt_ts_suspend(&mxt_data->client->dev);
+			} else if (*transition == FB_BLANK_UNBLANK) {
+				mxt_ts_resume(&mxt_data->client->dev);
+			}
+		}
+	}
+
+	return 0;
+}
+#endif
+
 static int mxt_ts_suspend(struct device *dev)
 {
 	struct mxt_data *data =  dev_get_drvdata(dev);
 
-	if (device_may_wakeup(dev) && data->wakeup_gesture_mode) {
-		dev_info(dev, "touch enable irq wake\n");
+	if (data->wakeup_gesture_mode) {
+		dev_err(dev, "touch enable irq wake\n");
 		enable_irq_wake(data->client->irq);
 	}
 
@@ -4623,18 +4756,21 @@ static int mxt_ts_resume(struct device *dev)
 {
 	struct mxt_data *data =  dev_get_drvdata(dev);
 
-	if (device_may_wakeup(dev) && data->wakeup_gesture_mode) {
-		dev_info(dev, "touch disable irq wake\n");
+	if (data->wakeup_gesture_mode) {
+		dev_err(dev, "touch disable irq wake\n");
 		disable_irq_wake(data->client->irq);
 	}
 
 	return 0;
 }
 
+#ifdef CONFIG_PM
 static struct dev_pm_ops mxt_touchscreen_pm_ops = {
 #ifndef CONFIG_HAS_EARLYSUSPEND
+#ifndef CONFIG_FB
 	.suspend = mxt_ts_suspend,
 	.resume	 = mxt_ts_resume,
+#endif
 #endif
 };
 #endif
