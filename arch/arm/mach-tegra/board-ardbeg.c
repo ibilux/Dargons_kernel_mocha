@@ -283,6 +283,7 @@ static struct platform_device *ardbeg_devices[] __initdata = {
 	&tegra_hda_device,
 	&tegra_offload_device,
 	&tegra30_avp_audio_device,
+    &fm_dit_device,
 #if defined(CONFIG_CRYPTO_DEV_TEGRA_AES)
 	&tegra_aes_device,
 #endif
@@ -774,6 +775,8 @@ static struct of_dev_auxdata ardbeg_auxdata_lookup[] __initdata = {
 	OF_DEV_AUXDATA("nvidia,tegra114-ahci-sata", 0x70027000, "tegra-sata.0",
 		NULL),
 	OF_DEV_AUXDATA("pwm-backlight", 0, "pwm-backlight", NULL),
+    OF_DEV_AUXDATA("nvidia,tegra-audio-rt5671", 0x0, "tegra-snd-rt5671",
+  				NULL),
 	{}
 };
 #endif	
