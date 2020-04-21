@@ -18,6 +18,11 @@
 #if !defined(_BINDER_TRACE_H) || defined(TRACE_HEADER_MULTI_READ)
 #define _BINDER_TRACE_H
 
+#ifdef CONFIG_ANDROID_BINDER_IPC_32BIT
+#define BINDER_IPC_32BIT 1
+#endif
+
+
 #include <linux/tracepoint.h>
 
 struct binder_buffer;
