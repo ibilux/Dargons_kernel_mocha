@@ -31,8 +31,6 @@ config ANDROID_BINDER_DEVICES
 	  created. Each binder device has its own context manager, and is
 	  therefore logically separated from the other devices.
 
-
-
 endif # if ANDROID
 
 endmenu
