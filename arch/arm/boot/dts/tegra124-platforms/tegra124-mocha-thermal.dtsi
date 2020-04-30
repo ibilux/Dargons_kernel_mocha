@@ -75,7 +75,8 @@
 				map0 {
 					trip = <&{/thermal-zones/CPU-therm/trips/cpu_critical}>;
 					cdev-type = "tegra-shutdown";
-					cooling-device = <&soctherm@0x700E2000/throttle@critical THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+					cooling-device = <&{/soctherm@0x700E2000/throttle@critical}
+						THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
 				};
 				map1 {
 					trip = <&{/thermal-zones/CPU-therm/trips/cpu_heavy}>;
