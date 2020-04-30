@@ -1,0 +1,45 @@
+/ *
+ * Copyright (c) 2014 - 2015, NVIDIA CORPORATION. Todos los derechos reservados.
+ * *
+ * Este programa es software libre; puedes redistribuirlo y / o modificarlo
+ * bajo los términos y condiciones de la Licencia Pública General de GNU,
+ * versión 2, según lo publicado por la Free Software Foundation.
+ * *
+ * Este programa se distribuye con la esperanza de que sea útil, pero SIN
+ * CUALQUIER GARANTÍA; sin siquiera la garantía implícita de COMERCIABILIDAD o
+ * APTITUD PARA UN PROPÓSITO EN PARTICULAR. Vea la Licencia Pública General de GNU para
+ * más detalles.
+ * *
+ * Debería haber recibido una copia de la Licencia Pública General de GNU
+ * junto con este programa. Si no, vea <http://www.gnu.org/licenses/>.
+ * /
+
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/gpio/tegra-gpio.h>
+
+/ * Definiciones térmicas de gpio * /
+#define TEMP_ALERT TEGRA_GPIO (I, 6)
+
+/ {
+	i2c @ 7000c000 {
+		tegra_nct72: onsemi, nct72 @ 4c {
+			# celdas-sensor-térmicas = <1>;
+			compatible = "onsemi, nct72";
+			reg = <0x4c>;
+			sensor-name = "tegra";
+			soportado-hwrev = <1>;
+			desplazamiento = <0>;
+			conv-rate = <0x06>;
+			ira extendida = <1>;
+			interrupt-parent = <& gpio>;
+			interrupciones = <TEMP_ALERT IRQ_TYPE_LEVEL_LOW>;
+			temp-alert-gpio = <& gpio TEMP_ALERT 0>;
+			loc {
+				shutdown-limit = <120>;
+			};
+			ext {
+				shutdown-limit = <95>;
+			};
+		};
+	};
+};

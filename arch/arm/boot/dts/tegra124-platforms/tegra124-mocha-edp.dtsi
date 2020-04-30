@@ -1,0 +1,101 @@
+/ *
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION. Todos los derechos reservados.
+ * *
+ * Este programa es software libre; puedes redistribuirlo y / o modificarlo
+ * bajo los términos de la Licencia Pública General GNU publicada por
+ * la Fundación de Software Libre; versión 2 de la licencia.
+ * *
+ * Este programa se distribuye con la esperanza de que sea útil, pero SIN
+ * CUALQUIER GARANTÍA; sin siquiera la garantía implícita de COMERCIABILIDAD o
+ * APTITUD PARA UN PROPÓSITO EN PARTICULAR. Vea la Licencia Pública General de GNU para
+ * más detalles.
+ * *
+ * Debería haber recibido una copia de la Licencia Pública General de GNU junto
+ * con este programa; si no, escriba a la Free Software Foundation, Inc.,
+ * 51 Franklin Street, quinto piso, Boston, MA 02110-1301, EE. UU.
+ * *
+ * /
+
+ #define C_TO_K (x) (x + 273)
+
+ #define MAKE_EDP_TRIP (proc, temp) \
+	proc ## _ edp _ ## temp: proc ## _ edp @ temp {\
+		temperatura = <temp ## 000>; \
+		histéresis = <1000>; \
+		tipo = "activo"; \
+	}
+
+ #define MAP_CPU_EDP (temp) \
+	map_cpu_edp _ ## temp {\
+		trip = <& cpu_edp _ ## temp>; \
+		dispositivo de enfriamiento = <& cpu_edp (C_TO_K (temp)) (C_TO_K (temp))>; \
+	}
+
+ #define MAP_GPU_EDP (temp) \
+	map_gpu_edp _ ## temp {\
+		trip = <& gpu_edp _ ## temp>; \
+		dispositivo de enfriamiento = <& gpu_edp (C_TO_K (temp)) (C_TO_K (temp))>; \
+	}
+
+/ {
+	zonas térmicas {
+		CPU-therm {
+			excursiones {
+				MAKE_EDP_TRIP (cpu, 23);
+				MAKE_EDP_TRIP (cpu, 40);
+				MAKE_EDP_TRIP (cpu, 50);
+				MAKE_EDP_TRIP (cpu, 60);
+				MAKE_EDP_TRIP (CPU, 70);
+				MAKE_EDP_TRIP (cpu, 74);
+				MAKE_EDP_TRIP (cpu, 78);
+				MAKE_EDP_TRIP (cpu, 82);
+				MAKE_EDP_TRIP (cpu, 86);
+				MAKE_EDP_TRIP (cpu, 90);
+				MAKE_EDP_TRIP (cpu, 94);
+				MAKE_EDP_TRIP (cpu, 98);
+				MAKE_EDP_TRIP (cpu, 102);
+			};
+			mapas de enfriamiento {
+				MAP_CPU_EDP (23);
+				MAP_CPU_EDP (40);
+				MAP_CPU_EDP (50);
+				MAP_CPU_EDP (60);
+				MAP_CPU_EDP (70);
+				MAP_CPU_EDP (74);
+				MAP_CPU_EDP (78);
+				MAP_CPU_EDP (82);
+				MAP_CPU_EDP (86);
+				MAP_CPU_EDP (90);
+				MAP_CPU_EDP (94);
+				MAP_CPU_EDP (98);
+				MAP_CPU_EDP (102);
+			};
+		};
+		GPU-therm {
+			excursiones {
+				MAKE_EDP_TRIP (gpu, 20);
+				MAKE_EDP_TRIP (gpu, 50);
+				MAKE_EDP_TRIP (gpu, 70);
+				MAKE_EDP_TRIP (gpu, 75);
+				MAKE_EDP_TRIP (gpu, 80);
+				MAKE_EDP_TRIP (gpu, 85);
+				MAKE_EDP_TRIP (gpu, 90);
+				MAKE_EDP_TRIP (gpu, 95);
+				MAKE_EDP_TRIP (gpu, 100);
+				MAKE_EDP_TRIP (gpu, 105);
+			};
+			mapas de enfriamiento {
+				MAP_GPU_EDP (20);
+				MAP_GPU_EDP (50);
+				MAP_GPU_EDP (70);
+				MAP_GPU_EDP (75);
+				MAP_GPU_EDP (80);
+				MAP_GPU_EDP (85);
+				MAP_GPU_EDP (90);
+				MAP_GPU_EDP (95);
+				MAP_GPU_EDP (100);
+				MAP_GPU_EDP (105);
+			};
+		};
+	};
+};

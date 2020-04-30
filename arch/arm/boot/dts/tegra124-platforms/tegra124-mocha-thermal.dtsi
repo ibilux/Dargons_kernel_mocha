@@ -21,9 +21,10 @@
 	};
 
 	therm_est_sensor {
-		status = "disabled";
-		use_activator = <0>;
+		status = "okay";
+		use_activator = <1>;
 		subdev {
+			subdev_names = "Tdiode_tegra", "Tboard_tegra";
 			coeff_set@0 {
 				toffset = <3543>;
 				coeffs = <
@@ -58,7 +59,7 @@
 					writable;
 				};
 				cpu_heavy {
-					temperature = <90000>;
+					temperature = <94000>;
 					hysteresis = <0>;
 					type = "hot";
 					writable;
@@ -74,8 +75,7 @@
 				map0 {
 					trip = <&{/thermal-zones/CPU-therm/trips/cpu_critical}>;
 					cdev-type = "tegra-shutdown";
-					cooling-device = <&{/soctherm@0x700E2000/throttle@critical}
-						THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+					cooling-device = <&soctherm@0x700E2000/throttle@critical THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
 				};
 				map1 {
 					trip = <&{/thermal-zones/CPU-therm/trips/cpu_heavy}>;
@@ -115,13 +115,13 @@
 					writable;
 				};
 				gpu_heavy {
-					temperature = <86500>;
+					temperature = <91000>;
 					hysteresis = <0>;
 					type = "hot";
 					writable;
 				};
 				gpu_throttle {
-					temperature = <80000>;
+					temperature = <81000>;
 					hysteresis = <0>;
 					type = "passive";
 					writable;
@@ -131,9 +131,7 @@
 				map0 {
 					trip = <&{/thermal-zones/GPU-therm/trips/gpu_critical}>;
 					cdev-type = "tegra-shutdown";
-					cooling-device = <&{/soctherm@0x700E2000/throttle@critical}
-						THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
-				};
+					cooling-device = <&{/soctherm@0x700E2000/throttle@critical}THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;};
 				map1 {
 					trip = <&{/thermal-zones/GPU-therm/trips/gpu_heavy}>;
 					cdev-type = "tegra-heavy";
@@ -206,7 +204,7 @@
 		};
 
 		therm_est {
-			status = "disabled";
+			status = "okay";
 			trips {
 				skin_trip {
 					temperature = <47000>;
